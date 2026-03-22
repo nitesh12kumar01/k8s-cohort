@@ -1,0 +1,92 @@
+--- Pending---
+1-pending.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: demo-pending
+spec:
+  containers:
+  - name: resource-hog
+    image: nginx
+    resources:
+      requests:
+        cpu: "100" # Minikube does not have 100 CPU cores!
+
+
+kubectl get pods -o wide -w #On duplicate terminal
+
+kubectl apply -f 1-pending.yaml
+
+kubectl describe pod demo-pending
+
+
+--Running--
+
+2-running.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: demo-running
+spec:
+  containers:
+  - name: nginx-web
+    image: nginx
+
+kubectl get pods -o wide -w #On duplicate terminal
+
+kubectl apply -f 2-running.yaml
+
+--Succeeded--
+
+3-succeeded.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: demo-succeeded
+spec:
+  restartPolicy: Never
+  containers:
+  - name: task-worker
+    image: busybox
+    command: ['sh', '-c', 'echo "task finished perfectly!"; sleep 5']
+
+kubectl apply -f 3-succeeded.yaml
+
+---
+
+4-failing.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: demo-failed
+spec:
+  restartPolicy: Never
+  containers:
+  - name: failing-worker
+    image: busybox
+    command: ['sh', '-c', 'echo "Oh no, a fatal error occurred!"; exit 1']
+
+
+kubectl apply -f 4-failed.yaml
+
+---
+
+5-crashloop.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: demo-crashloop
+spec:
+  restartPolicy: Always
+  containers:
+  - name: crashing-worker
+    image: busybox
+    command: ['sh', '-c', 'echo "Crashing..."; exit 1']
+
+
+kubectl apply -f 5-crashloop.yaml
