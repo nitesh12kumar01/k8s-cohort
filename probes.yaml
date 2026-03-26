@@ -1,0 +1,56 @@
+Readiness/liveness
+
+-----
+
+readiness.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: demo-readiness
+  labels:
+    app: training
+spec:
+  containers:
+  - name: web-server
+    image: busybox
+    # We simulate a "warm-up" period by waiting for a file to exist
+    command: ['sh', '-c', 'sleep 20; touch /tmp/ready; sleep 10000']
+    readinessProbe:
+      exec:
+        command:
+        - cat
+        - /tmp/ready
+      initialDelaySeconds: 5
+      periodSeconds: 5
+
+kubectl apply -f 6-readiness.yaml
+
+---
+
+liveness.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: demo-liveness
+spec:
+  containers:
+  - name: healthy-then-dead
+    image: busybox
+    # This script creates a 'health' file, then deletes it after 15 seconds
+    command: ['sh', '-c', 'touch /tmp/healthy; sleep 15; rm /tmp/healthy; sleep 1000']
+    livenessProbe:
+      exec:
+        command:
+        - cat
+        - /tmp/healthy
+      initialDelaySeconds: 5
+      periodSeconds: 5
+
+
+kubectl apply -f 6-liveness.yaml
+
+kubectl describe pod demo-liveness
+
+----
