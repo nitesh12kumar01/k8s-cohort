@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: demo-init
+spec:
+  containers:
+  - name: main-app
+    image: busybox
+    command: ['sh', '-c', 'echo "The app is finally running!"; sleep 3600']
+  
+  initContainers:
+  - name: wait-for-db
+    image: busybox
+    # This script keeps looking for a service named 'mydb'
+    command: ['sh', '-c', "until nslookup mydb.default.svc.cluster.local; do echo waiting for mydb; sleep 2; done"]
