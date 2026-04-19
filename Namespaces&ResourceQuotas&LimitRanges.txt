@@ -1,0 +1,115 @@
+# Create namespaces using imperative commands
+kubectl create namespace development
+kubectl create namespace production
+
+# List all namespaces to verify
+kubectl get namespaces
+
+---
+
+Step 2: Showcasing Object Isolation
+Resources in one namespace are "invisible" to commands targeting another namespace unless explicitly specified.
+
+Deploy a Pod to development:
+
+kubectl run dev-app --image=nginx -n development
+Try to find it in the default or production namespace:
+
+# This will NOT show the dev-app
+kubectl get pods
+kubectl get pods -n production
+
+View it by specifying the namespace:
+
+kubectl get pods -n development
+
+-----
+
+Step 3: Enforcing Resource Quotas
+Namespaces are the primary boundary for resource management. We will prevent the Development team from "starving" the cluster of CPU and Memory.
+
+1. Apply a ResourceQuota to the development namespace:
+Create a file named dev-quota.yaml:
+
+YAML
+
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: dev-limit
+  namespace: development
+spec:
+  hard:
+    pods: "2"
+    requests.cpu: "1"
+    requests.memory: 1Gi
+    limits.cpu: "2"
+    limits.memory: 2Gi
+
+kubectl apply -f dev-quota.yaml
+
+2. Test the Quota (Trigger a failure):
+Try to scale your deployment beyond the allowed 2 pods:
+
+kubectl run dev-app-2 --image=nginx -n development
+
+kubectl run dev-app-3 --image=nginx -n development --overrides='
+{
+  "spec": {
+    "containers": [
+      {
+        "name": "dev-app-3",
+        "image": "nginx",
+        "resources": {
+          "requests": {
+            "cpu": "100m",
+            "memory": "256Mi"
+          },
+          "limits": {
+            "cpu": "200m",
+            "memory": "512Mi"
+          }
+        }
+      }
+    ]
+  }
+}'
+
+----
+
+kubectl run dev-app-3 --image=nginx -n development
+Note: The third pod will fail or remain in Pending (if using a Deployment) because it violates the "hard: pods: 2" rule. You can check the error using kubectl describe quota dev-limit -n development.
+
+-----
+
+limit-range:
+
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: dev-defaults
+  namespace: development
+spec:
+  limits:
+  - default: # default limits
+      cpu: 500m
+      memory: 512Mi
+    defaultRequest: # default requests
+      cpu: 200m
+      memory: 256Mi
+    type: Container
+
+kubectl apply -f dev-defaults.yaml
+------
+
+Step 4: Cross-Namespace Communication (DNS)
+Namespaces provide a DNS suffix for services, allowing you to reach apps across boundaries using their Fully Qualified Domain Name (FQDN).
+
+Expose a service in production:
+
+kubectl expose pod dev-app --port=80 --name=prod-service -n production
+
+Access from development:
+If a pod in the development namespace wants to talk to the production service, it can't just use http://prod-service. It must use:
+
+http://prod-service.development.svc.cluster.local
