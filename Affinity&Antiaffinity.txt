@@ -1,0 +1,89 @@
+Affinity & anti-affinity
+----
+#Label the node
+kubectl label nodes affinity-lab-m02 disktype=ssd
+
+#use nodeaffinity in pod yaml to match nodeselector
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ssd-pod
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: disktype
+            operator: In
+            values:
+            - ssd
+  containers:
+  - name: nginx
+    image: nginx
+
+kubectl apply -f node-affinity.yaml
+
+----
+#use podantiaffinity in pod yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-server
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: web-ha
+  template:
+    metadata:
+      labels:
+        app: web-ha
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - web-ha
+            topologyKey: "kubernetes.io/hostname"
+      containers:
+      - name: nginx
+        image: nginx
+
+kubectl apply -f anti-affinity.yaml
+kubectl get pods -l app=web-ha -o wide
+-----
+
+#Use pod affinity to match labels as per label selectors in deployments
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cache-pod
+spec:
+  affinity:
+    podAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: app
+            operator: In
+            values:
+            - web-ha
+        topologyKey: "kubernetes.io/hostname"
+  containers:
+  - name: redis
+    image: redis
+
+kubectl apply -f pod-affinity.yaml
+kubectl get pods -o wide
+
+----
+#minikube command to setup 3 node kubernetes cluster
+minikube start --nodes 3 -p affinity-lab
