@@ -1,0 +1,33 @@
+# Apply a taint to a specific node
+# Format: kubectl taint nodes <node-name> key=value:effect
+kubectl taint nodes <your-node-name> hardware=gpu:NoSchedule
+
+kubectl run regular-app --image=nginx
+
+kubectl get pods -o wide
+
+kubectl describe pod regular-app
+-------
+gpu-app.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gpu-app
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+  tolerations:
+  - key: "hardware"
+    operator: "Equal"
+    value: "gpu"
+    effect: "NoSchedule"
+
+kubectl apply -f gpu-app.yaml
+--
+Remove taint:
+kubectl taint nodes <your-node-name> hardware=gpu:NoSchedule-
+
+Add taint:
+kubectl taint nodes <your-node-name> hardware=gpu:NoExecute
